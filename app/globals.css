@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { @apply bg-slate-950 text-white; }
+  body { @apply antialiased bg-slate-950 text-white; }
+}
+
+@layer components {
+  .card { @apply bg-slate-900 border border-slate-800 rounded-2xl; }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-violet-600 hover:bg-violet-500 active:bg-violet-700
+           text-white font-semibold rounded-xl px-5 py-3
+           transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl px-5 py-3
+           transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+           bg-rose-700 hover:bg-rose-600 text-white font-semibold rounded-xl px-5 py-3
+           transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1
+           text-violet-400 hover:text-violet-300 font-medium rounded-xl px-3 py-2
+           transition-colors duration-150;
+  }
+
+  .input {
+    @apply w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+           rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500
+           focus:border-transparent transition-all duration-150;
+  }
+
+  .label { @apply block text-sm font-medium text-slate-300 mb-1; }
+
+  .error-msg {
+    @apply text-rose-400 text-sm rounded-xl bg-rose-950 border border-rose-800 px-4 py-3;
+  }
+}
