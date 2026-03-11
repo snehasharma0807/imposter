@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { animate, stagger } from 'animejs'
 
 const COUNT = 10
 
@@ -9,7 +10,6 @@ function makePositions() {
   return Array.from({ length: COUNT }, () => ({
     top: `${15 + Math.random() * 70}%`,
     left: `${10 + Math.random() * 80}%`,
-    rotate: Math.random() * 30 - 15,
   }))
 }
 
@@ -30,41 +30,28 @@ export default function TreasureChest() {
     const photos = Array.from(
       containerRef.current.querySelectorAll<HTMLElement>('.sneha-photo')
     )
+    if (!photos.length) return
+
     let cancelled = false
 
-    async function run() {
-      const { animate, stagger } = await import('animejs')
+    // Burst in
+    animate(photos, {
+      scale: [0, 1.1, 1],
+      opacity: [0, 1],
+      rotate: () => Math.random() * 30 - 15,
+      duration: 700,
+      delay: stagger(80, { from: 'random' }),
+      ease: 'spring(2, 60, 12, 0)',
+    })
 
-      // Burst in
-      animate(photos, {
-        scale: [0, 1],
-        opacity: [0, 1],
-        rotate: () => Math.random() * 30 - 15,
-        duration: 700,
-        delay: stagger(60, { from: 'random' }),
-        ease: 'spring(2, 60, 12, 0)',
-      })
-
-      // Wiggle after landing
-      await new Promise((r) => setTimeout(r, 900))
+    // Fly off after 2.5s
+    const flyTimer = setTimeout(() => {
       if (cancelled) return
-
       animate(photos, {
-        rotate: () => [Math.random() * 30 - 15, Math.random() * 30 - 15, Math.random() * 30 - 15],
-        duration: 500,
-        delay: stagger(40, { from: 'random' }),
-        ease: 'easeInOutSine',
-      })
-
-      // Fly off
-      await new Promise((r) => setTimeout(r, 1800))
-      if (cancelled) return
-
-      animate(photos, {
-        translateX: () => `${(Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 80)}vw`,
-        translateY: () => `${(Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 80)}vh`,
+        translateX: () => `${(Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 80)}vw`,
+        translateY: () => `${(Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 80)}vh`,
         rotate: () => Math.random() * 720 - 360,
-        scale: 0.3,
+        scale: 0.2,
         opacity: 0,
         duration: 800,
         delay: stagger(50, { from: 'random' }),
@@ -73,10 +60,12 @@ export default function TreasureChest() {
           if (!cancelled) setActive(false)
         },
       })
-    }
+    }, 2500)
 
-    run()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearTimeout(flyTimer)
+    }
   }, [active])
 
   return (
@@ -84,7 +73,7 @@ export default function TreasureChest() {
       <button
         onClick={handleClick}
         aria-label="Treasure"
-        className="fixed bottom-4 right-4 z-50 opacity-40 hover:opacity-100 transition-opacity"
+        className="fixed bottom-4 right-4 z-50 opacity-40 hover:opacity-100 transition-opacity cursor-pointer"
       >
         <Image src="/treasure chest.png" alt="Treasure chest" width={36} height={36} />
       </button>
@@ -101,7 +90,8 @@ export default function TreasureChest() {
               style={{
                 top: pos.top,
                 left: pos.left,
-                transform: 'translate(-50%, -50%) scale(0)',
+                marginLeft: '-90px',
+                marginTop: '-90px',
                 opacity: 0,
               }}
             >
