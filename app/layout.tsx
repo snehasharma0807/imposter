@@ -14,8 +14,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">
-        <Providers>{children}</Providers>
+      <body className="antialiased flex flex-col min-h-screen">
+        <Providers>
+          <div className="flex-1">{children}</div>
+        </Providers>
+        <footer className="text-center py-4 text-slate-500 text-sm">
+          made by{' '}
+          <a
+            href="https://www.linkedin.com/in/snehasharma77/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            sneha sharma
+          </a>
+        </footer>
       </body>
     </html>
   )

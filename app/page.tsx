@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -27,9 +28,7 @@ export default function HomePage() {
 
       <div className="relative z-10 flex flex-col items-center gap-6 max-w-md w-full">
         {/* Logo mark */}
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/50">
-          <span className="text-4xl font-black text-white select-none">?</span>
-        </div>
+        <Image src="/amonguslogo.png" alt="Imposter logo" width={100} height={100} priority />
 
         <div>
           <h1 className="text-5xl font-black tracking-tight text-white">Imposter</h1>
