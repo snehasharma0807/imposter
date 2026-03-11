@@ -1,11 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Spinner } from '@/components/Spinner'
 
 export default function NewCollectionPage() {
+  return (
+    <Suspense>
+      <NewCollectionForm />
+    </Suspense>
+  )
+}
+
+function NewCollectionForm() {
   const [name, setName] = useState('')
   const [words, setWords] = useState<string[]>([])
   const [currentWord, setCurrentWord] = useState('')
