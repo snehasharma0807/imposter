@@ -8,6 +8,8 @@ import type { RoundState } from './game-logic'
 export interface GameConfig {
   playerCount: number
   words: string[]
+  imposterCount: number
+  playerNames: string[]
 }
 
 // Backward-compat alias used by setup page
@@ -16,7 +18,6 @@ export type GameState = GameConfig
 interface GameContextType {
   gameConfig: GameConfig | null
   setGameConfig: (config: GameConfig) => void
-  // Backward-compat – setup page calls setGameState
   setGameState: (config: GameConfig) => void
   roundState: RoundState | null
   startRound: () => void
@@ -45,46 +46,36 @@ export function GameProvider({ children, initialConfig, initialRound }: GameProv
 
   const startRound = () => {
     if (!gameConfig) return
-    setRoundState(buildRound(gameConfig.playerCount, gameConfig.words))
+    setRoundState(buildRound(gameConfig.playerCount, gameConfig.words, gameConfig.imposterCount))
   }
 
   const nextPlayer = () => {
     setRoundState(prev => {
       if (!prev || !gameConfig) return prev
       const next = prev.currentPlayerIndex + 1
-      if (next >= gameConfig.playerCount) {
-        return { ...prev, allRevealed: true }
-      }
+      if (next >= gameConfig.playerCount) return { ...prev, allRevealed: true }
       return { ...prev, currentPlayerIndex: next }
     })
   }
 
-  const startDiscussion = () => {
+  const startDiscussion = () =>
     setRoundState(prev => prev ? { ...prev, phase: 'discussion' } : prev)
-  }
 
-  const toggleTimer = () => {
+  const toggleTimer = () =>
     setRoundState(prev => prev ? { ...prev, timerEnabled: !prev.timerEnabled } : prev)
-  }
 
-  const startVoting = () => {
+  const startVoting = () =>
     setRoundState(prev => prev ? { ...prev, phase: 'voting' } : prev)
-  }
 
-  const castVote = (playerIndex: number) => {
-    setRoundState(prev => {
-      if (!prev) return prev
-      return { ...prev, votes: [...prev.votes, playerIndex] }
-    })
-  }
+  const castVote = (playerIndex: number) =>
+    setRoundState(prev => prev ? { ...prev, votes: [...prev.votes, playerIndex] } : prev)
 
-  const showResults = () => {
+  const showResults = () =>
     setRoundState(prev => prev ? { ...prev, phase: 'results' } : prev)
-  }
 
   const playAgain = () => {
     if (!gameConfig) return
-    setRoundState(buildRound(gameConfig.playerCount, gameConfig.words))
+    setRoundState(buildRound(gameConfig.playerCount, gameConfig.words, gameConfig.imposterCount))
   }
 
   const ctx: GameContextType = {

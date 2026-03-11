@@ -24,20 +24,18 @@ describe('Auth Pages', () => {
   test('Signup form renders correctly', () => {
     render(<SignupPage />)
 
-    expect(screen.getByText('Sign up for an account')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Email address')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument()
+    expect(screen.getByText(/create your free account/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
     expect(screen.getByText(/already have an account/i)).toBeInTheDocument()
   })
 
   test('Login form renders correctly', () => {
     render(<LoginPage />)
 
-    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Email address')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
+    expect(screen.getByText(/sign in to your account/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
-    expect(screen.getByText(/don't have an account/i)).toBeInTheDocument()
+    expect(screen.getByText(/no account/i)).toBeInTheDocument()
   })
 })

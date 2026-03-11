@@ -1,6 +1,20 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
+import LogoutButton from '@/components/LogoutButton'
 
 export default function HomePage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
+    })
+  }, [])
+
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-4 text-center">
       {/* Glow blob */}
@@ -31,20 +45,31 @@ export default function HomePage() {
           >
             Play Now
           </Link>
-          <Link
-            href="/auth/signup"
-            className="btn-secondary text-base w-full rounded-2xl"
-          >
-            Create Account
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link href="/dashboard" className="btn-secondary text-base w-full rounded-2xl">
+                My Collections
+              </Link>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link
+              href="/auth/signup"
+              className="btn-secondary text-base w-full rounded-2xl"
+            >
+              Create Account
+            </Link>
+          )}
         </div>
 
-        <p className="text-slate-500 text-sm">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="text-violet-400 hover:text-violet-300 font-medium">
-            Sign in
-          </Link>
-        </p>
+        {!isLoggedIn && (
+          <p className="text-slate-500 text-sm">
+            Already have an account?{' '}
+            <Link href="/auth/login" className="text-violet-400 hover:text-violet-300 font-medium">
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
     </main>
   )

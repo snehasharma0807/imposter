@@ -5,8 +5,9 @@ import { randomBytes } from 'crypto'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { share_code: string } }
+  { params }: { params: Promise<{ share_code: string }> }
 ) {
+  const { share_code } = await params
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +34,7 @@ export async function GET(
         created_at
       )
     `)
-    .eq('share_code', params.share_code)
+    .eq('share_code', share_code)
     .single()
 
   if (error || !collection) {
@@ -45,8 +46,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { share_code: string } }
+  { params }: { params: Promise<{ share_code: string }> }
 ) {
+  const { share_code } = await params
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,20 +77,20 @@ export async function POST(
         word
       )
     `)
-    .eq('share_code', params.share_code)
+    .eq('share_code', share_code)
     .single()
 
   if (fetchError || !sourceCollection) {
     return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
   }
 
-  const shareCode = randomBytes(4).toString('hex').toUpperCase()
+  const newShareCode = randomBytes(4).toString('hex').toUpperCase()
   const { data: newCollection, error: createError } = await supabase
     .from('collections')
     .insert({
       user_id: user.id,
       name: sourceCollection.name,
-      share_code: shareCode,
+      share_code: newShareCode,
     })
     .select()
     .single()

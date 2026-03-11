@@ -24,7 +24,7 @@ export default function CollectionPage() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    fetch(\`/api/collections/\${id}\`)
+    fetch(`/api/collections/${id}`)
       .then(res => {
         if (!res.ok) throw new Error('Collection not found')
         return res.json()
@@ -39,7 +39,7 @@ export default function CollectionPage() {
     if (!w) return
     setAddingWord(true)
     setWordError('')
-    const res = await fetch(\`/api/collections/\${id}/words\`, {
+    const res = await fetch(`/api/collections/${id}/words`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ word: w }),
@@ -55,14 +55,14 @@ export default function CollectionPage() {
   }
 
   const deleteWord = async (wordId: string) => {
-    const res = await fetch(\`/api/words/\${wordId}\`, { method: 'DELETE' })
+    const res = await fetch(`/api/words/${wordId}`, { method: 'DELETE' })
     if (res.ok) {
       setCollection(prev => prev ? { ...prev, words: prev.words.filter(w => w.id !== wordId) } : prev)
     }
   }
 
   const updateName = async () => {
-    const res = await fetch(\`/api/collections/\${id}\`, {
+    const res = await fetch(`/api/collections/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName }),
@@ -75,13 +75,13 @@ export default function CollectionPage() {
 
   const deleteCollection = async () => {
     if (!confirm('Delete this collection? This cannot be undone.')) return
-    const res = await fetch(\`/api/collections/\${id}\`, { method: 'DELETE' })
+    const res = await fetch(`/api/collections/${id}`, { method: 'DELETE' })
     if (res.ok) router.push('/dashboard')
   }
 
   const copyShareLink = () => {
     if (!collection) return
-    navigator.clipboard.writeText(\`\${window.location.origin}/collections/import/\${collection.share_code}\`)
+    navigator.clipboard.writeText(`${window.location.origin}/collections/import/${collection.share_code}`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -174,7 +174,7 @@ export default function CollectionPage() {
                   <button
                     onClick={() => deleteWord(word.id)}
                     className="text-slate-600 hover:text-rose-400 text-sm transition-colors"
-                    aria-label={\`Delete \${word.word}\`}
+                    aria-label={`Delete ${word.word}`}
                   >
                     Remove
                   </button>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Spinner } from '@/components/Spinner'
 
@@ -13,6 +13,8 @@ export default function NewCollectionPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromSetup = searchParams.get('from') === 'setup'
 
   const addWord = () => {
     const w = currentWord.trim()
@@ -26,6 +28,19 @@ export default function NewCollectionPage() {
   }
 
   const removeWord = (index: number) => setWords(prev => prev.filter((_, i) => i !== index))
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const parsed = text.split(/[\n,]/).map(w => w.trim()).filter(Boolean)
+      setWords(prev => [...prev, ...parsed])
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,15 +62,15 @@ export default function NewCollectionPage() {
     }
 
     const created = await res.json()
-    router.push(`/collections/${created.id}`)
+    router.push(fromSetup ? `/game/setup?new=${created.id}` : `/collections/${created.id}/edit`)
   }
 
   return (
     <div className="min-h-screen bg-slate-950">
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link href="/dashboard" className="text-slate-400 hover:text-white transition-colors">←</Link>
-          <h1 className="text-lg font-bold text-white">New Collection</h1>
+          <Link href={fromSetup ? '/game/setup' : '/dashboard'} className="text-slate-400 hover:text-white transition-colors">←</Link>
+          <h1 className="text-lg font-bold text-white">New Category</h1>
         </div>
       </header>
 
@@ -109,6 +124,19 @@ export default function NewCollectionPage() {
                   Add all
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="csv-upload" className="label">Or upload a .txt / .csv file</label>
+              <p className="text-slate-500 text-xs">One word per line, or comma-separated values.</p>
+              <input
+                id="csv-upload"
+                type="file"
+                accept=".txt,.csv,text/plain,text/csv"
+                onChange={handleFileUpload}
+                className="block text-slate-300 text-sm file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-700 file:text-white hover:file:bg-slate-600 cursor-pointer"
+                aria-label="Upload word list file"
+              />
             </div>
 
             {words.length > 0 && (

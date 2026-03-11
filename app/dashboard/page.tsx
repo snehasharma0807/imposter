@@ -2,20 +2,54 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import LogoutButton from '@/components/LogoutButton'
 import { Spinner } from '@/components/Spinner'
 
 interface Collection {
   id: string
   name: string
-  share_code: string
+  share_code?: string
   created_at: string
+  access_type: 'owner' | 'edit' | 'view'
+}
+
+function CollectionCard({ col }: { col: Collection }) {
+  const canEdit = col.access_type === 'owner' || col.access_type === 'edit'
+  const badge = col.access_type === 'owner' ? null : col.access_type === 'edit' ? 'Edit Access' : 'View Only'
+
+  return (
+    <div className="card p-5 flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="font-semibold text-white truncate">{col.name}</p>
+        {badge && <span className="text-xs text-violet-400 capitalize">{badge}</span>}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {canEdit ? (
+          <Link href={`/collections/${col.id}/edit`} className="btn-secondary text-sm py-1.5 px-3 rounded-lg">
+            Edit
+          </Link>
+        ) : (
+          <Link href={`/collections/${col.id}/edit`} className="btn-secondary text-sm py-1.5 px-3 rounded-lg">
+            View
+          </Link>
+        )}
+        {col.access_type === 'view' && (
+          <Link href={`/collections/${col.id}/copy`} className="text-violet-400 hover:text-violet-300 text-sm transition-colors whitespace-nowrap">
+            Copy
+          </Link>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function DashboardPage() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [importCode, setImportCode] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     fetch('/api/collections')
@@ -27,6 +61,16 @@ export default function DashboardPage() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
+
+  const myLists = collections.filter(c => c.access_type === 'owner')
+  const sharedEdit = collections.filter(c => c.access_type === 'edit')
+  const sharedView = collections.filter(c => c.access_type === 'view')
+
+  const handleImport = () => {
+    const code = importCode.trim().toUpperCase()
+    if (!code) return
+    router.push(`/collections/import/${code}`)
+  }
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -42,10 +86,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">My Collections</h1>
-          <p className="text-slate-400 text-sm mt-1">Word lists you can use in games</p>
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white">List Management</h1>
+          <p className="text-slate-400 text-sm mt-1">Word lists for your games</p>
         </div>
 
         {loading && (
@@ -55,48 +99,75 @@ export default function DashboardPage() {
         )}
 
         {!loading && error && (
-          <p role="alert" className="error-msg">
-            {error}
-          </p>
+          <p role="alert" className="error-msg">{error}</p>
         )}
 
-        {!loading && !error && collections.length === 0 && (
-          <div className="card p-10 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">📦</span>
-            </div>
-            <h2 className="text-lg font-semibold text-white mb-2">No collections yet</h2>
-            <p className="text-slate-400 text-sm mb-6">
-              Create a word list to use in your next game.
-            </p>
-            <Link href="/collections/new" className="btn-primary">
-              Create your first collection
-            </Link>
-          </div>
-        )}
+        {!loading && !error && (
+          <>
+            {/* My Lists */}
+            <section className="space-y-3">
+              <h2 className="text-slate-300 font-semibold text-sm uppercase tracking-wide">My Lists</h2>
+              {myLists.length === 0 ? (
+                <div className="card p-8 text-center">
+                  <p className="text-slate-500 text-sm mb-4">No lists yet.</p>
+                  <Link href="/collections/new" className="btn-primary">
+                    Create your first collection
+                  </Link>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {myLists.map(col => <li key={col.id}><CollectionCard col={col} /></li>)}
+                </ul>
+              )}
+            </section>
 
-        {!loading && !error && collections.length > 0 && (
-          <ul className="space-y-3">
-            {collections.map(col => (
-              <li key={col.id}>
-                <Link
-                  href={`/collections/${col.id}`}
-                  className="card p-5 flex items-center justify-between hover:border-slate-700 transition-colors group block"
+            {/* Shared With Me — Edit */}
+            {sharedEdit.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-slate-300 font-semibold text-sm uppercase tracking-wide">Shared With Me (Edit Access)</h2>
+                <ul className="space-y-2">
+                  {sharedEdit.map(col => <li key={col.id}><CollectionCard col={col} /></li>)}
+                </ul>
+              </section>
+            )}
+
+            {/* Shared With Me — View */}
+            {sharedView.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-slate-300 font-semibold text-sm uppercase tracking-wide">Shared With Me (View Only)</h2>
+                <ul className="space-y-2">
+                  {sharedView.map(col => <li key={col.id}><CollectionCard col={col} /></li>)}
+                </ul>
+              </section>
+            )}
+
+            {/* Import via Code */}
+            <section className="card p-5">
+              <h2 className="font-semibold text-white mb-1">Import via Code</h2>
+              <p className="text-slate-400 text-sm mb-4">Enter a share code to preview and import a list.</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={importCode}
+                  onChange={e => setImportCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => { if (e.key === 'Enter') handleImport() }}
+                  placeholder="e.g. ABC12345"
+                  className="input font-mono"
+                  aria-label="Import share code"
+                />
+                <button
+                  onClick={handleImport}
+                  disabled={!importCode.trim()}
+                  className="btn-primary whitespace-nowrap"
                 >
-                  <div>
-                    <p className="font-semibold text-white group-hover:text-violet-300 transition-colors">
-                      {col.name}
-                    </p>
-                    <p className="text-slate-500 text-xs mt-0.5 font-mono">{col.share_code}</p>
-                  </div>
-                  <span className="text-slate-600 group-hover:text-violet-400 text-lg transition-colors">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  Import
+                </button>
+              </div>
+            </section>
+          </>
         )}
 
-        <div className="mt-8 pt-6 border-t border-slate-800">
+        <div className="pt-4 border-t border-slate-800">
           <Link href="/game/setup" className="btn-primary w-full py-4 text-lg rounded-2xl">
             Play a Game
           </Link>

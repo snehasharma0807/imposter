@@ -2,12 +2,19 @@
 import { render, screen } from '@testing-library/react'
 import HomePage from '../app/page'
 
-// Next.js Link renders as <a> tags in the test environment
 jest.mock('next/link', () => {
   return function MockLink({ href, children }: { href: string; children: React.ReactNode }) {
     return <a href={href}>{children}</a>
   }
 })
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+}))
+
+jest.mock('@/lib/supabase', () => ({
+  createClient: () => ({ auth: { getUser: () => Promise.resolve({ data: { user: null } }) } }),
+}))
 
 describe('Homepage', () => {
   beforeEach(() => {

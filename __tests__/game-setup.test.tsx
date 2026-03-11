@@ -141,72 +141,6 @@ describe('Game Setup Page', () => {
   })
 
   // -------------------------------------------------------------------------
-  // 3. Share code fetches and adds words
-  // -------------------------------------------------------------------------
-
-  test('entering a valid share code loads and adds its words', async () => {
-    const shareResponse = {
-      id: 'col123',
-      name: 'Friend Collection',
-      words: [
-        { id: 'w1', word: 'Sword' },
-        { id: 'w2', word: 'Shield' },
-        { id: 'w3', word: 'Axe' },
-      ],
-    }
-
-    ;(global as any).fetch = jest.fn()
-      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
-      .mockImplementationOnce(() => makeOkResponse(shareResponse))
-
-    renderSetup()
-    await screen.findByText('Animals')
-
-    await userEvent.type(screen.getByLabelText('Share code'), 'ABC12345')
-    await userEvent.click(screen.getByRole('button', { name: /^load$/i }))
-
-    expect(await screen.findByText('3 words loaded from share codes.')).toBeInTheDocument()
-    expect(screen.getByText('3 words selected')).toBeInTheDocument()
-  })
-
-  test('entering an invalid share code shows an error', async () => {
-    ;(global as any).fetch = jest.fn()
-      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
-      .mockImplementationOnce(() => makeErrorResponse())
-
-    renderSetup()
-    await screen.findByText('Animals')
-
-    await userEvent.type(screen.getByLabelText('Share code'), 'BADCODE')
-    await userEvent.click(screen.getByRole('button', { name: /^load$/i }))
-
-    expect(
-      await screen.findByText('Collection not found for that share code.')
-    ).toBeInTheDocument()
-  })
-
-  test('share code is uppercased automatically and cleared after loading', async () => {
-    const shareResponse = { id: 'col123', name: 'X', words: [{ id: 'w1', word: 'Gem' }] }
-
-    ;(global as any).fetch = jest.fn()
-      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
-      .mockImplementationOnce(() => makeOkResponse(shareResponse))
-
-    renderSetup()
-    await screen.findByText('Animals')
-
-    const shareInput = screen.getByLabelText('Share code') as HTMLInputElement
-    await userEvent.type(shareInput, 'abc12345')
-    // Input value should be uppercased
-    expect(shareInput.value).toBe('ABC12345')
-
-    await userEvent.click(screen.getByRole('button', { name: /^load$/i }))
-    await screen.findByText('1 words loaded from share codes.')
-    // Input clears after successful load
-    expect(shareInput.value).toBe('')
-  })
-
-  // -------------------------------------------------------------------------
   // 4. Start Game disabled conditions
   // -------------------------------------------------------------------------
 
@@ -265,15 +199,16 @@ describe('Game Setup Page', () => {
 
     renderSetup()
 
-    expect(await screen.findByText('Your Collections')).toBeInTheDocument()
+    expect(await screen.findByText('Custom Categories')).toBeInTheDocument()
     expect(screen.getByText('My Sci-Fi Words')).toBeInTheDocument()
     expect(screen.getByText('Office Words')).toBeInTheDocument()
   })
 
-  test('does not show user collections section when logged out', async () => {
+  test('does not show create button or collections list when logged out', async () => {
     renderSetup()
     await screen.findByText('Animals')
 
-    expect(screen.queryByText('Your Collections')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /create new/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/sign in/i)).toBeInTheDocument()
   })
 })

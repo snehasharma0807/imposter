@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { FullPageSpinner, Spinner } from '@/components/Spinner'
 
-interface Word { id: string; word: string; created_at: string }
-interface Collection { id: string; name: string; share_code: string; created_at: string; words: Word[] }
+interface Word { id: string; word: string }
+interface Collection { id: string; name: string; access_type: 'edit' | 'view'; words: Word[] }
 
 export default function ImportCollectionPage() {
   const params = useParams()
@@ -27,26 +27,45 @@ export default function ImportCollectionPage() {
       const { data: { user } } = await supabase.auth.getUser()
       setIsLoggedIn(!!user)
 
-      const res = await fetch(\`/api/collections/share/\${shareCode}\`)
-      if (!res.ok) { setNotFound(true) }
-      else { setCollection(await res.json()) }
+      // Try new collection_access-based import endpoint first
+      const res = await fetch(`/api/collections/import/${shareCode}`)
+      if (res.ok) {
+        setCollection(await res.json())
+      } else {
+        // Fallback: old-style share_code on collections table
+        const fallback = await fetch(`/api/collections/share/${shareCode}`)
+        if (fallback.ok) {
+          const data = await fallback.json()
+          setCollection({ ...data, access_type: 'view' })
+        } else {
+          setNotFound(true)
+        }
+      }
       setLoading(false)
     }
     load()
   }, [shareCode])
 
-  const saveToMyCollections = async () => {
+  const addToMyGame = async () => {
     setSaving(true)
     setSaveError('')
-    const res = await fetch(\`/api/collections/share/\${shareCode}\`, { method: 'POST' })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      setSaveError(data.error || 'Failed to save collection')
+    // Try new import endpoint
+    const res = await fetch(`/api/collections/import/${shareCode}`, { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json()
+      router.push(`/collections/${data.id}/edit`)
+      return
+    }
+    // Fallback: old-style clone
+    const fallback = await fetch(`/api/collections/share/${shareCode}`, { method: 'POST' })
+    if (!fallback.ok) {
+      const data = await fallback.json().catch(() => ({}))
+      setSaveError(data.error || 'Failed to import')
       setSaving(false)
       return
     }
-    const newCollection = await res.json()
-    router.push(\`/collections/\${newCollection.id}\`)
+    const newCol = await fallback.json()
+    router.push(`/collections/${newCol.id}/edit`)
   }
 
   if (loading) return <FullPageSpinner />
@@ -56,38 +75,40 @@ export default function ImportCollectionPage() {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-5xl mb-4">🔍</p>
-          <h1 className="text-xl font-bold text-white mb-2">Collection not found</h1>
-          <p className="text-slate-400 text-sm mb-6">This share code does not match any collection.</p>
+          <h1 className="text-xl font-bold text-white mb-2">List not found</h1>
+          <p className="text-slate-400 text-sm mb-6">This share code does not match any list.</p>
           <Link href="/" className="btn-primary">Go home</Link>
         </div>
       </div>
     )
   }
 
+  const accessLabel = collection!.access_type === 'edit' ? 'Edit Access — you can modify this list' : 'View Only — you can use this list in games'
+
   return (
     <div className="min-h-screen bg-slate-950">
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-slate-400 hover:text-white transition-colors">←</Link>
+            <Link href="/dashboard" className="text-slate-400 hover:text-white transition-colors">←</Link>
             <h1 className="text-lg font-bold text-white truncate">{collection!.name}</h1>
           </div>
           {isLoggedIn ? (
-            <button onClick={saveToMyCollections} disabled={saving} className="btn-primary py-2 px-4 text-sm">
-              {saving ? <><Spinner size="sm" /> Saving…</> : 'Save to My Collections'}
+            <button onClick={addToMyGame} disabled={saving} className="btn-primary py-2 px-4 text-sm">
+              {saving ? <><Spinner size="sm" /> Saving…</> : 'Add to My Game'}
             </button>
           ) : (
-            <Link href="/auth/login" className="btn-primary py-2 px-4 text-sm">Log in to Save</Link>
+            <Link href={`/auth/login?next=/collections/import/${shareCode}`} className="btn-primary py-2 px-4 text-sm">
+              Log in to Import
+            </Link>
           )}
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <div className="card p-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-slate-400 text-xs mb-1">Share code</p>
-            <p className="font-mono text-violet-300 font-semibold">{collection!.share_code}</p>
-          </div>
+        <div className="card p-4 flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full ${collection!.access_type === 'edit' ? 'bg-violet-500' : 'bg-amber-500'}`} />
+          <p className="text-slate-300 text-sm">{accessLabel}</p>
         </div>
 
         {saveError && <p role="alert" className="error-msg">{saveError}</p>}
@@ -104,7 +125,7 @@ export default function ImportCollectionPage() {
               ))}
             </ul>
           ) : (
-            <div className="px-5 py-8 text-center text-slate-500 text-sm">This collection has no words.</div>
+            <div className="px-5 py-8 text-center text-slate-500 text-sm">This list has no words.</div>
           )}
         </div>
       </main>

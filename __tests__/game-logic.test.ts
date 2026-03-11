@@ -2,14 +2,13 @@
 
 import {
   pickWord,
-  assignImposter,
+  assignImposters,
   tallyVotes,
   isImposterCaught,
   buildRound,
 } from '@/lib/game-logic'
 
 describe('game-logic pure functions', () => {
-  // ── pickWord ──────────────────────────────────────────────────────────────
   test('pickWord returns a word from the list', () => {
     const words = ['Apple', 'Banana', 'Cherry']
     for (let i = 0; i < 20; i++) {
@@ -17,16 +16,26 @@ describe('game-logic pure functions', () => {
     }
   })
 
-  // ── assignImposter ────────────────────────────────────────────────────────
-  test('assignImposter returns a valid player index', () => {
+  test('assignImposters returns the correct number of unique indices', () => {
+    for (let count = 1; count <= 3; count++) {
+      const indices = assignImposters(8, count)
+      expect(indices).toHaveLength(count)
+      expect(new Set(indices).size).toBe(count)
+      indices.forEach(i => {
+        expect(i).toBeGreaterThanOrEqual(0)
+        expect(i).toBeLessThan(8)
+      })
+    }
+  })
+
+  test('assignImposters with count=1 returns exactly one valid index', () => {
     for (let playerCount = 3; playerCount <= 10; playerCount++) {
-      const idx = assignImposter(playerCount)
+      const [idx] = assignImposters(playerCount, 1)
       expect(idx).toBeGreaterThanOrEqual(0)
       expect(idx).toBeLessThan(playerCount)
     }
   })
 
-  // ── tallyVotes ────────────────────────────────────────────────────────────
   test('tallyVotes returns the index with the most votes', () => {
     expect(tallyVotes([0, 1, 1, 2, 1])).toBe(1)
     expect(tallyVotes([2, 2, 0, 2])).toBe(2)
@@ -37,24 +46,27 @@ describe('game-logic pure functions', () => {
     expect(tallyVotes([3])).toBe(3)
   })
 
-  // ── isImposterCaught ──────────────────────────────────────────────────────
-  test('isImposterCaught returns true when most votes point to the imposter', () => {
-    expect(isImposterCaught([1, 1, 0, 1], 1)).toBe(true)
+  test('isImposterCaught returns true when most votes point to an imposter', () => {
+    expect(isImposterCaught([1, 1, 0, 1], [1])).toBe(true)
+    expect(isImposterCaught([1, 1, 0, 1], [0, 1])).toBe(true)
   })
 
-  test('isImposterCaught returns false when most votes do not point to the imposter', () => {
-    expect(isImposterCaught([0, 0, 1, 2], 1)).toBe(false)
+  test('isImposterCaught returns false when most votes miss all imposters', () => {
+    expect(isImposterCaught([0, 0, 1, 2], [1, 2])).toBe(false)
+    expect(isImposterCaught([0, 0, 1, 2], [1])).toBe(false)
   })
 
-  // ── buildRound ────────────────────────────────────────────────────────────
-  test('buildRound produces exactly one imposter within valid range', () => {
+  test('buildRound produces the correct number of imposters', () => {
     const words = ['A', 'B', 'C', 'D', 'E']
-    const playerCount = 5
-    for (let i = 0; i < 30; i++) {
-      const round = buildRound(playerCount, words)
-      expect(round.imposterIndex).toBeGreaterThanOrEqual(0)
-      expect(round.imposterIndex).toBeLessThan(playerCount)
+    for (let imposterCount = 1; imposterCount <= 3; imposterCount++) {
+      const round = buildRound(8, words, imposterCount)
+      expect(round.imposterIndices).toHaveLength(imposterCount)
     }
+  })
+
+  test('buildRound defaults to 1 imposter', () => {
+    const round = buildRound(4, ['X'])
+    expect(round.imposterIndices).toHaveLength(1)
   })
 
   test('buildRound picks a word from the supplied list', () => {
