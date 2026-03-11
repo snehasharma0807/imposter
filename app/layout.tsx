@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Providers } from './providers'
+import TreasureChest from '@/components/TreasureChest'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({
         <Providers>
           <div className="flex-1">{children}</div>
         </Providers>
+        <TreasureChest />
         <footer className="text-center py-4 text-slate-500 text-sm">
           made by{' '}
           <a
