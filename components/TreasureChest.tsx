@@ -35,14 +35,11 @@ export default function TreasureChest() {
     async function run() {
       const { animate, stagger } = await import('animejs')
 
-      // Burst in — scale up with a spring bounce, random stagger
+      // Burst in
       animate(photos, {
         scale: [0, 1],
         opacity: [0, 1],
-        rotate: (el: Element, i: number) => [
-          positionsRef.current[i].rotate - 180,
-          positionsRef.current[i].rotate,
-        ],
+        rotate: () => Math.random() * 30 - 15,
         duration: 700,
         delay: stagger(60, { from: 'random' }),
         ease: 'spring(2, 60, 12, 0)',
@@ -53,18 +50,13 @@ export default function TreasureChest() {
       if (cancelled) return
 
       animate(photos, {
-        rotate: (el: Element, i: number) => [
-          positionsRef.current[i].rotate,
-          positionsRef.current[i].rotate + 12,
-          positionsRef.current[i].rotate - 12,
-          positionsRef.current[i].rotate,
-        ],
+        rotate: () => [Math.random() * 30 - 15, Math.random() * 30 - 15, Math.random() * 30 - 15],
         duration: 500,
         delay: stagger(40, { from: 'random' }),
         ease: 'easeInOutSine',
       })
 
-      // Wait then fly off in random directions
+      // Fly off
       await new Promise((r) => setTimeout(r, 1800))
       if (cancelled) return
 
@@ -72,8 +64,8 @@ export default function TreasureChest() {
         translateX: () => `${(Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 80)}vw`,
         translateY: () => `${(Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 80)}vh`,
         rotate: () => Math.random() * 720 - 360,
-        scale: [1, 0.3],
-        opacity: [1, 0],
+        scale: 0.3,
+        opacity: 0,
         duration: 800,
         delay: stagger(50, { from: 'random' }),
         ease: 'easeInBack(2)',
@@ -109,7 +101,7 @@ export default function TreasureChest() {
               style={{
                 top: pos.top,
                 left: pos.left,
-                transform: `translate(-50%, -50%) rotate(${pos.rotate}deg) scale(0)`,
+                transform: 'translate(-50%, -50%) scale(0)',
                 opacity: 0,
               }}
             >
