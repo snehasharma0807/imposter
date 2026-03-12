@@ -197,6 +197,7 @@ describe('Game Setup Page', () => {
     ;(global as any).fetch = jest.fn()
       .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
       .mockImplementationOnce(() => makeOkResponse(userCollections))
+      .mockImplementationOnce(() => makeOkResponse({ saved_players: null })) // /api/profile
 
     renderSetup()
 
@@ -267,5 +268,145 @@ describe('Game Setup Page', () => {
 
     expect(screen.queryByRole('link', { name: /create new/i })).not.toBeInTheDocument()
     expect(screen.getByText(/sign in/i)).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // 7. Play Again / Resume mode
+  // -------------------------------------------------------------------------
+
+  test('resume mode pre-populates player names and count from previous game config', async () => {
+    window.history.pushState({}, '', '/game/setup?resume=1')
+
+    const prevConfig = {
+      playerCount: 3,
+      playerNames: ['Alice', 'Bob', 'Carol'],
+      imposterCount: 1,
+      words: ['Word1'],
+      selectedCategoryIds: [],
+      selectedCollectionIds: [],
+    }
+
+    render(
+      <GameProvider initialConfig={prevConfig}>
+        <GameSetupPage />
+      </GameProvider>
+    )
+
+    await screen.findByText('Animals')
+
+    const input1 = screen.getByLabelText('Name for player 1') as HTMLInputElement
+    const input3 = screen.getByLabelText('Name for player 3') as HTMLInputElement
+    expect(input1.value).toBe('Alice')
+    expect(input3.value).toBe('Carol')
+
+    const playerCountInput = screen.getByLabelText('Number of players') as HTMLInputElement
+    expect(playerCountInput.value).toBe('3')
+
+    window.history.pushState({}, '', '/game/setup')
+  })
+
+  test('resume mode shows Start Fresh link', async () => {
+    window.history.pushState({}, '', '/game/setup?resume=1')
+
+    const prevConfig = {
+      playerCount: 3,
+      playerNames: ['Alice', 'Bob', 'Carol'],
+      imposterCount: 1,
+      words: ['Word1'],
+    }
+
+    render(
+      <GameProvider initialConfig={prevConfig}>
+        <GameSetupPage />
+      </GameProvider>
+    )
+
+    await screen.findByText('Animals')
+    expect(screen.getByRole('link', { name: /start fresh/i })).toBeInTheDocument()
+
+    window.history.pushState({}, '', '/game/setup')
+  })
+
+  // -------------------------------------------------------------------------
+  // 8. Saved players (profile persistence)
+  // -------------------------------------------------------------------------
+
+  test('logged-in user sees Use last players button when profile has saved players', async () => {
+    mockUserImpl = () =>
+      Promise.resolve({ data: { user: { id: 'user123' } } })
+
+    ;(global as any).fetch = jest.fn()
+      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))     // /api/default-categories
+      .mockImplementationOnce(() => makeOkResponse([]))                      // /api/collections
+      .mockImplementationOnce(() => makeOkResponse({ saved_players: ['Alice', 'Bob', 'Carol'] })) // /api/profile
+
+    renderSetup()
+    await screen.findByText('Animals')
+
+    expect(screen.getByRole('button', { name: /use last players/i })).toBeInTheDocument()
+  })
+
+  test('Use last players button restores saved player names', async () => {
+    mockUserImpl = () =>
+      Promise.resolve({ data: { user: { id: 'user123' } } })
+
+    ;(global as any).fetch = jest.fn()
+      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
+      .mockImplementationOnce(() => makeOkResponse([]))
+      .mockImplementationOnce(() => makeOkResponse({ saved_players: ['Alice', 'Bob', 'Carol'] }))
+
+    renderSetup()
+    await screen.findByText('Animals')
+
+    await userEvent.click(screen.getByRole('button', { name: /use last players/i }))
+
+    const input1 = screen.getByLabelText('Name for player 1') as HTMLInputElement
+    const input2 = screen.getByLabelText('Name for player 2') as HTMLInputElement
+    const input3 = screen.getByLabelText('Name for player 3') as HTMLInputElement
+    expect(input1.value).toBe('Alice')
+    expect(input2.value).toBe('Bob')
+    expect(input3.value).toBe('Carol')
+  })
+
+  test('player names are saved to profile on game start for logged-in users', async () => {
+    mockUserImpl = () =>
+      Promise.resolve({ data: { user: { id: 'user123' } } })
+
+    const fetchMock = jest.fn()
+      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
+      .mockImplementationOnce(() => makeOkResponse([]))
+      .mockImplementationOnce(() => makeOkResponse({ saved_players: null }))
+      .mockImplementation(() => makeOkResponse({ ok: true })) // catch-all for startGame calls
+    ;(global as any).fetch = fetchMock
+
+    renderSetup()
+    await userEvent.click(await screen.findByRole('checkbox', { name: /animals/i }))
+    await userEvent.type(screen.getByLabelText('Name for player 1'), 'Alice')
+    await userEvent.click(screen.getByRole('button', { name: /start game/i }))
+
+    const patchCall = fetchMock.mock.calls.find(
+      ([url, opts]: [string, RequestInit]) => url === '/api/profile' && opts?.method === 'PATCH'
+    )
+    expect(patchCall).toBeDefined()
+    const body = JSON.parse(patchCall![1].body as string)
+    expect(body.saved_players[0]).toBe('Alice')
+    expect(body.saved_players[1]).toBe('Player 2')
+  })
+
+  test('unauthenticated users do not trigger profile save on game start', async () => {
+    // mockUserImpl already returns null user (set in beforeEach)
+    const fetchMock = jest.fn()
+      .mockImplementationOnce(() => makeOkResponse(DEFAULT_CATEGORIES))
+      .mockImplementation(() => makeOkResponse({ ok: true }))
+    ;(global as any).fetch = fetchMock
+
+    renderSetup()
+    await userEvent.click(await screen.findByRole('checkbox', { name: /animals/i }))
+    await userEvent.click(screen.getByRole('button', { name: /start game/i }))
+
+    const patchCall = fetchMock.mock.calls.find(
+      ([url, opts]: [string, RequestInit]) => url === '/api/profile' && opts?.method === 'PATCH'
+    )
+    expect(patchCall).toBeUndefined()
   })
 })

@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useGame } from '@/lib/GameContext'
-import { Spinner, FullPageSpinner } from '@/components/Spinner'
+import { FullPageSpinner } from '@/components/Spinner'
 
 interface DefaultCategory { id: string; name: string; words: string[] }
 interface UserCollection { id: string; name: string; share_code?: string; access_type?: string }
 
 export default function GameSetupPage() {
   const router = useRouter()
-  const { setGameState } = useGame()
+  const { setGameState, gameConfig } = useGame()
 
+  const [isResume, setIsResume] = useState(false)
   const [playerCount, setPlayerCount] = useState(4)
   const [imposterCount, setImposterCount] = useState(1)
   const [playerNames, setPlayerNames] = useState<string[]>(Array.from({ length: 4 }, () => ''))
@@ -30,6 +31,7 @@ export default function GameSetupPage() {
   const [uploadFileName, setUploadFileName] = useState('')
   const [fetchError, setFetchError] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [savedPlayers, setSavedPlayers] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -51,10 +53,46 @@ export default function GameSetupPage() {
           collections = await colRes.json()
           setUserCollections(collections)
         }
+
+        // Load saved players from profile
+        const profileRes = await fetch('/api/profile')
+        if (profileRes.ok) {
+          const profile = await profileRes.json()
+          if (profile.saved_players?.length) {
+            setSavedPlayers(profile.saved_players)
+          }
+        }
+      }
+
+      // Handle ?resume=1 — pre-populate from previous game config
+      const urlParams = new URLSearchParams(window.location.search)
+      const resuming = urlParams.get('resume') === '1'
+      if (resuming && gameConfig) {
+        setIsResume(true)
+        setPlayerCount(gameConfig.playerCount)
+        setPlayerNames(gameConfig.playerNames)
+        setImposterCount(gameConfig.imposterCount)
+        if (gameConfig.selectedCategoryIds) {
+          setSelectedCategoryIds(new Set(gameConfig.selectedCategoryIds))
+        }
+        if (gameConfig.selectedCollectionIds?.length) {
+          setSelectedCollectionIds(new Set(gameConfig.selectedCollectionIds))
+          await Promise.all(
+            gameConfig.selectedCollectionIds.map(async (id) => {
+              const res = await fetch(`/api/collections/${id}`)
+              if (res.ok) {
+                const data = await res.json()
+                setCollectionWords(prev => ({
+                  ...prev,
+                  [id]: (data.words ?? []).map((w: { word: string }) => w.word),
+                }))
+              }
+            })
+          )
+        }
       }
 
       // Auto-select a newly created collection (?new=<id>)
-      const urlParams = new URLSearchParams(window.location.search)
       const newColId = urlParams.get('new')
       if (newColId) {
         setSelectedCollectionIds(prev => new Set([...prev, newColId]))
@@ -72,7 +110,7 @@ export default function GameSetupPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep playerNames in sync when playerCount changes
   const handlePlayerCountChange = (count: number) => {
@@ -83,12 +121,19 @@ export default function GameSetupPage() {
       while (next.length < clamped) next.push('')
       return next.slice(0, clamped)
     })
-    // Clamp imposterCount if needed
     setImposterCount(prev => Math.min(prev, Math.max(1, clamped - 1)))
   }
 
   const updatePlayerName = (index: number, name: string) => {
     setPlayerNames(prev => prev.map((n, i) => i === index ? name : n))
+  }
+
+  const useLastPlayers = () => {
+    if (!savedPlayers) return
+    const count = savedPlayers.length
+    setPlayerCount(count)
+    setPlayerNames([...savedPlayers])
+    setImposterCount(prev => Math.min(prev, count - 1))
   }
 
   const maxImposters = Math.max(1, playerCount - 1)
@@ -161,7 +206,24 @@ export default function GameSetupPage() {
   const canStart = playerCount >= 3 && selectedWords.length > 0
 
   const startGame = () => {
-    setGameState({ playerCount, words: selectedWords, imposterCount, playerNames: playerNames.map((n, i) => n.trim() || `Player ${i + 1}`) })
+    const names = playerNames.map((n, i) => n.trim() || `Player ${i + 1}`)
+    setGameState({
+      playerCount,
+      words: selectedWords,
+      imposterCount,
+      playerNames: names,
+      selectedCategoryIds: Array.from(selectedCategoryIds),
+      selectedCollectionIds: Array.from(selectedCollectionIds),
+    })
+
+    if (isLoggedIn) {
+      fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ saved_players: names }),
+      }).catch(() => {})
+    }
+
     router.push('/game/play')
   }
 
@@ -172,7 +234,17 @@ export default function GameSetupPage() {
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-lg font-black text-white tracking-tight">Imposter</Link>
-          <h2 className="text-slate-400 text-sm font-medium">Game Setup</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-slate-400 text-sm font-medium">Game Setup</h2>
+            {isResume && (
+              <Link
+                href="/game/setup"
+                className="text-slate-500 hover:text-slate-300 text-xs underline transition-colors"
+              >
+                Start Fresh
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -182,7 +254,18 @@ export default function GameSetupPage() {
 
         {/* Players */}
         <section className="card p-5">
-          <h2 className="font-semibold text-white mb-4">Players</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white">Players</h2>
+            {savedPlayers && !isResume && (
+              <button
+                type="button"
+                onClick={useLastPlayers}
+                className="text-violet-400 hover:text-violet-300 text-xs transition-colors"
+              >
+                Use last players ({savedPlayers.length})
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-4 mb-5">
             <input

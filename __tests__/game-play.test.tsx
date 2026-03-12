@@ -6,8 +6,9 @@ import type { RoundState } from '@/lib/game-logic'
 import GamePlayPage from '../app/game/play/page'
 
 const mockReplace = jest.fn()
+const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: mockReplace, push: jest.fn(), refresh: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush, refresh: jest.fn() }),
 }))
 jest.mock('next/link', () => {
   return function MockLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -112,10 +113,10 @@ describe('Game Play Page', () => {
     expect(screen.getAllByText(/carol/i).length).toBeGreaterThan(0)
   })
 
-  test('Play Again resets to reveal phase with first player name', async () => {
+  test('Play Again navigates to /game/setup?resume=1', async () => {
     renderPlay(4, [2], { phase: 'results' })
     await userEvent.click(screen.getByRole('button', { name: /play again/i }))
-    expect(screen.getByText('Alice')).toBeInTheDocument()
+    expect(mockPush).toHaveBeenCalledWith('/game/setup?resume=1')
   })
 
   test('Home link is present', () => {

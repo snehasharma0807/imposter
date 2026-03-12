@@ -10,6 +10,8 @@ export interface GameConfig {
   words: string[]
   imposterCount: number
   playerNames: string[]
+  selectedCategoryIds?: string[]
+  selectedCollectionIds?: string[]
 }
 
 // Backward-compat alias used by setup page
@@ -19,6 +21,7 @@ interface GameContextType {
   gameConfig: GameConfig | null
   setGameConfig: (config: GameConfig) => void
   setGameState: (config: GameConfig) => void
+  resetGame: () => void
   roundState: RoundState | null
   startRound: () => void
   nextPlayer: () => void
@@ -42,7 +45,15 @@ export function GameProvider({ children, initialConfig, initialRound }: GameProv
   const [gameConfig, setGameConfigState] = useState<GameConfig | null>(initialConfig ?? null)
   const [roundState, setRoundState] = useState<RoundState | null>(initialRound ?? null)
 
-  const setGameConfig = (config: GameConfig) => setGameConfigState(config)
+  const setGameConfig = (config: GameConfig) => {
+    setGameConfigState(config)
+    setRoundState(null) // always start fresh — clears any stale phase from a previous game
+  }
+
+  const resetGame = () => {
+    setGameConfigState(null)
+    setRoundState(null)
+  }
 
   const startRound = () => {
     if (!gameConfig) return
@@ -82,6 +93,7 @@ export function GameProvider({ children, initialConfig, initialRound }: GameProv
     gameConfig,
     setGameConfig,
     setGameState: setGameConfig,
+    resetGame,
     roundState,
     startRound,
     nextPlayer,

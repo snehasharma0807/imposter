@@ -10,7 +10,7 @@ export default function GamePlayPage() {
   const {
     gameConfig, roundState,
     startRound, startDiscussion,
-    toggleTimer, showResults, playAgain,
+    toggleTimer, showResults,
   } = useGame()
 
   const [timeLeft, setTimeLeft] = useState(60)
@@ -237,7 +237,7 @@ export default function GamePlayPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <button onClick={playAgain} className="btn-primary w-full text-lg py-4 rounded-2xl">
+            <button onClick={() => router.push('/game/setup?resume=1')} className="btn-primary w-full text-lg py-4 rounded-2xl">
               Play Again
             </button>
             <Link href="/game/setup" className="btn-secondary w-full text-base py-3 rounded-2xl text-center">

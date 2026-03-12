@@ -26,7 +26,7 @@ describe('Homepage', () => {
   })
 
   test('renders a tagline / description', () => {
-    expect(screen.getByText(/one player is the imposter/i)).toBeInTheDocument()
+    expect(screen.getByText(/find the imposter/i)).toBeInTheDocument()
   })
 
   test('renders a Play Now link pointing to /game/setup', () => {
