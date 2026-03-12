@@ -33,7 +33,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-5xl font-black tracking-tight text-white">Imposter</h1>
           <p className="mt-3 text-slate-400 text-lg leading-relaxed">
-            One player is the imposter. Everyone else knows the word. Can you find them?
+            Find the imposter. Who is it? Trust nobody.
           </p>
         </div>
 

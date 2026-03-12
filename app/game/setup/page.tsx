@@ -10,17 +10,13 @@ import { Spinner, FullPageSpinner } from '@/components/Spinner'
 interface DefaultCategory { id: string; name: string; words: string[] }
 interface UserCollection { id: string; name: string; share_code?: string; access_type?: string }
 
-function defaultNames(count: number) {
-  return Array.from({ length: count }, (_, i) => `Player ${i + 1}`)
-}
-
 export default function GameSetupPage() {
   const router = useRouter()
   const { setGameState } = useGame()
 
   const [playerCount, setPlayerCount] = useState(4)
   const [imposterCount, setImposterCount] = useState(1)
-  const [playerNames, setPlayerNames] = useState<string[]>(defaultNames(4))
+  const [playerNames, setPlayerNames] = useState<string[]>(Array.from({ length: 4 }, () => ''))
   const [defaultCategories, setDefaultCategories] = useState<DefaultCategory[]>([])
   const [userCollections, setUserCollections] = useState<UserCollection[]>([])
   const [collectionWords, setCollectionWords] = useState<Record<string, string[]>>({})
@@ -84,7 +80,7 @@ export default function GameSetupPage() {
     setPlayerCount(clamped)
     setPlayerNames(prev => {
       const next = [...prev]
-      while (next.length < clamped) next.push(`Player ${next.length + 1}`)
+      while (next.length < clamped) next.push('')
       return next.slice(0, clamped)
     })
     // Clamp imposterCount if needed
@@ -165,7 +161,7 @@ export default function GameSetupPage() {
   const canStart = playerCount >= 3 && selectedWords.length > 0
 
   const startGame = () => {
-    setGameState({ playerCount, words: selectedWords, imposterCount, playerNames })
+    setGameState({ playerCount, words: selectedWords, imposterCount, playerNames: playerNames.map((n, i) => n.trim() || `Player ${i + 1}`) })
     router.push('/game/play')
   }
 
