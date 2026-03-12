@@ -1,7 +1,8 @@
 /// <reference types="@jest/globals" />
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { GameProvider } from '@/lib/GameContext'
+import { useEffect } from 'react'
+import { GameProvider, useGame } from '@/lib/GameContext'
 import GameSetupPage from '../app/game/setup/page'
 
 // ---------------------------------------------------------------------------
@@ -202,6 +203,62 @@ describe('Game Setup Page', () => {
     expect(await screen.findByText('Custom Categories')).toBeInTheDocument()
     expect(screen.getByText('My Sci-Fi Words')).toBeInTheDocument()
     expect(screen.getByText('Office Words')).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // 6. Player name placeholder behaviour
+  // -------------------------------------------------------------------------
+
+  test('player name inputs have placeholder text and are not pre-filled', async () => {
+    renderSetup()
+    await screen.findByText('Animals')
+
+    const input1 = screen.getByLabelText('Name for player 1') as HTMLInputElement
+    const input4 = screen.getByLabelText('Name for player 4') as HTMLInputElement
+
+    expect(input1).toHaveAttribute('placeholder', 'Player 1')
+    expect(input4).toHaveAttribute('placeholder', 'Player 4')
+    expect(input1.value).toBe('')
+    expect(input4.value).toBe('')
+  })
+
+  test('player name input value is empty string on render (placeholder is not a pre-filled value)', async () => {
+    renderSetup()
+    await screen.findByText('Animals')
+
+    const inputs = screen.getAllByRole('textbox').filter(
+      el => el.getAttribute('aria-label')?.startsWith('Name for player')
+    ) as HTMLInputElement[]
+
+    expect(inputs.length).toBeGreaterThan(0)
+    inputs.forEach(input => expect(input.value).toBe(''))
+  })
+
+  test('empty player name falls back to "Player N" display name when game starts', async () => {
+    let capturedNames: string[] | null = null
+
+    function StateCapture() {
+      const { gameConfig } = useGame()
+      useEffect(() => {
+        if (gameConfig?.playerNames) capturedNames = gameConfig.playerNames
+      }, [gameConfig])
+      return null
+    }
+
+    render(
+      <GameProvider>
+        <GameSetupPage />
+        <StateCapture />
+      </GameProvider>
+    )
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /animals/i }))
+    await userEvent.type(screen.getByLabelText('Name for player 1'), 'Alice')
+    await userEvent.click(screen.getByRole('button', { name: /start game/i }))
+
+    await waitFor(() =>
+      expect(capturedNames).toEqual(['Alice', 'Player 2', 'Player 3', 'Player 4'])
+    )
   })
 
   test('does not show create button or collections list when logged out', async () => {
